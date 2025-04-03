@@ -19,7 +19,6 @@ import { useState } from "react";
 
 import JobForm, { JobFormValues } from "@/components/job-form";
 
-
 import { columns } from "@/app/applicationtable/columns";
 
 import { DataTable } from "@/app/applicationtable/data-table";
@@ -68,9 +67,14 @@ export default function Page() {
           <div className="bg-muted/50   rounded-xl px-5 py-5 ">
             <JobForm onSubmitJob={handleAddJob} />
           </div>
-          <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min">
-            {/* <JobTable jobs={jobs} /> */}
-            <DataTable columns={columns} data={jobs} />
+          <div className="bg-muted/50 flex flex-col flex-1 rounded-xl overflow-hidden p-2">
+            <div className="flex-1 overflow-auto">
+              <DataTable
+                columns={columns}
+                data={jobs}
+                
+              />
+            </div>
           </div>
         </div>
       </SidebarInset>
