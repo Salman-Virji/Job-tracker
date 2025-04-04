@@ -46,12 +46,9 @@ const data = {
           title: "Job Tracker",
           url: "#",
         },
+        
         {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Analytics",
+          title: "Analytics (coming soon)",
           url: "#",
         },
       ],
