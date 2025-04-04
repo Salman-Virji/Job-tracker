@@ -32,6 +32,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import supabase from "@/lib/supabase"
+import { error } from "console"
+
+
 
 const formSchema = z.object({
   jobTitle: z.string().min(2).max(50),
@@ -65,10 +69,44 @@ export default function JobForm({
     },
   })
 
-  function onSubmit(values: JobFormValues) {
-    onSubmitJob(values)
-    form.reset() 
+  const onSubmit = async (values: JobFormValues) => {
+    // 1. Get the logged-in user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+  
+    if (!user) {
+      alert("You must be logged in to submit.")
+      return
+    }
+  
+    // 2. Insert job into Supabase
+    const { error } = await supabase.from("jobs").insert([
+      {
+        job_title: values.jobTitle,
+        company: values.company,
+        status: values.status,
+        date_applied: values.dateApplied,
+        job_url: values.jobURL || null,
+        user_id: user.id,
+      },
+    ])
+  
+    // 3. Handle success/failure
+    if (error) {
+      console.error("Error saving job:", error.message)
+      alert("Something went wrong")
+    } else {
+      alert("Job saved successfully!")
+      onSubmitJob(values)
+      form.reset() // optional: clear the form after saving
+    }
   }
+  
+
+  // onSubmitJob(values)
+    // form.reset() 
 
   return (
     <Form {...form}>

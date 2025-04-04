@@ -28,10 +28,45 @@ import AuthButtons from "@/components/AuthButtons";
 
 export default function Page() {
   const [user, setUser] = useState<any>(null);
+  
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
+
+
+      const fetchJobs = async () => {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+  
+        if (!user) return
+  
+        const { data, error } = await supabase
+          .from("jobs")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("date_applied", { ascending: false })
+  
+        if (error) {
+          console.error("Failed to fetch jobs:", error.message)
+        } else {
+
+          const formatted = data.map((job) => ({
+            jobTitle: job.job_title,
+            company: job.company,
+            status: job.status,
+            jobURL: job.job_url,
+            dateApplied: job.date_applied,
+          }))
+          setJobs(formatted)
+        }
+  
+        setLoading(false)
+      }
+  
+      fetchJobs()
     });
   }, []);
 
@@ -76,8 +111,11 @@ export default function Page() {
           {!user && (
             <p className="text-sm text-gray-500 italic mt-2">
               Please log in to access this feature
+              
             </p>
+            
           )}
+
           {/* <div className="grid auto-rows-min gap-4 md:grid-cols-3">
             <div className="bg-muted/50 aspect-video rounded-xl" >Hey</div>
             <div className="bg-muted/50 aspect-video rounded-xl" />
