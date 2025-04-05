@@ -1,4 +1,4 @@
-T#  Job Tracker
+  ##  Job Tracker
 
 Track your job applications.  
 Built using **Next.js**, **Supabase**, **Tailwind CSS**, **TypeScript**, and **shadcn/ui**.
