@@ -38,6 +38,7 @@ import { error } from "console"
 
 
 const formSchema = z.object({
+  id: z.string().uuid().optional(),
   jobTitle: z.string().min(2).max(50),
   company: z.string().min(2).max(50),
   status: z.enum([
@@ -58,9 +59,11 @@ export default function JobForm({
 }: {
   onSubmitJob: (data: JobFormValues) => void
 }) {
+  
   const form = useForm<JobFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      
       jobTitle: "",
       company: "",
       status: "Submitted",
@@ -80,10 +83,13 @@ export default function JobForm({
       alert("You must be logged in to submit.")
       return
     }
+
+    
   
     // 2. Insert job into Supabase
-    const { error } = await supabase.from("jobs").insert([
+    const { data,error } = await supabase.from("jobs").insert([
       {
+        
         job_title: values.jobTitle,
         company: values.company,
         status: values.status,
@@ -92,14 +98,23 @@ export default function JobForm({
         user_id: user.id,
       },
     ])
-  
+    .select("*")
+    .single()
+    
     // 3. Handle success/failure
     if (error) {
       console.error("Error saving job:", error.message)
       alert("Something went wrong")
     } else {
       alert("Job saved successfully!")
-      onSubmitJob(values)
+      onSubmitJob({
+        id: data.id,
+        jobTitle: data.job_title,
+        company: data.company,
+        status: data.status,
+        dateApplied: new Date(data.date_applied),
+        jobURL: data.job_url ?? "",
+      });
       form.reset() // optional: clear the form after saving
     }
   }

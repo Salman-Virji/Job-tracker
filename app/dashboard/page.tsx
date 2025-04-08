@@ -54,6 +54,7 @@ export default function Page() {
         } else {
 
           const formatted = data.map((job) => ({
+            id:job.id,
             jobTitle: job.job_title,
             company: job.company,
             status: job.status,
@@ -74,6 +75,18 @@ export default function Page() {
 
   function handleAddJob(data: JobFormValues) {
     setJobs((prev) => [...prev, data]);
+  }
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("jobs").delete().eq("id", id)
+  
+    if (error) {
+      console.error("Error deleting job:", error.message)
+      alert("Failed to delete the job.")
+    } else {
+      // Update local state
+      setJobs((prev) => prev.filter((job) => job.id !== id))
+    }
   }
   return (
     <SidebarProvider>
@@ -126,7 +139,7 @@ export default function Page() {
           </div>
           <div className="bg-muted/50 flex flex-col flex-1 rounded-xl overflow-hidden p-2">
             <div className="flex-1 overflow-auto">
-              <DataTable columns={columns} data={jobs} />
+              <DataTable columns={columns(handleDelete)} data={jobs} />
             </div>
           </div>
         </div>
