@@ -25,69 +25,83 @@ import { DataTable } from "@/app/applicationtable/data-table";
 
 import supabase from "@/lib/supabase";
 import AuthButtons from "@/components/AuthButtons";
+import EditJobDialog from "@/components/edit-job";
 
 export default function Page() {
   const [user, setUser] = useState<any>(null);
-  
-  const [loading, setLoading] = useState(true)
+
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
 
-
       const fetchJobs = async () => {
         const {
           data: { user },
-        } = await supabase.auth.getUser()
-  
-        if (!user) return
-  
+        } = await supabase.auth.getUser();
+
+        if (!user) return;
+
         const { data, error } = await supabase
           .from("jobs")
           .select("*")
           .eq("user_id", user.id)
-          .order("date_applied", { ascending: false })
-  
-        if (error) {
-          console.error("Failed to fetch jobs:", error.message)
-        } else {
+          .order("date_applied", { ascending: false });
 
+        if (error) {
+          console.error("Failed to fetch jobs:", error.message);
+        } else {
           const formatted = data.map((job) => ({
-            id:job.id,
+            id: job.id,
             jobTitle: job.job_title,
             company: job.company,
             status: job.status,
             jobURL: job.job_url,
-            dateApplied: job.date_applied,
-          }))
-          setJobs(formatted)
+            dateApplied: new Date(job.date_applied + "T00:00:00"),
+          }));
+          setJobs(formatted);
         }
-  
-        setLoading(false)
-      }
-  
-      fetchJobs()
+
+        setLoading(false);
+      };
+
+      fetchJobs();
     });
   }, []);
 
   const [jobs, setJobs] = useState<JobFormValues[]>([]);
-
+  const [editingJob, setEditingJob] = useState<JobFormValues | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const handleEdit = (job: JobFormValues) => {
+    setEditingJob(job);
+    setEditOpen(true);
+  };
+  
+  
   function handleAddJob(data: JobFormValues) {
     setJobs((prev) => [...prev, data]);
   }
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("jobs").delete().eq("id", id)
-  
+    const { error } = await supabase.from("jobs").delete().eq("id", id);
+
     if (error) {
-      console.error("Error deleting job:", error.message)
-      alert("Failed to delete the job.")
+      console.error("Error deleting job:", error.message);
+      alert("Failed to delete the job.");
     } else {
       // Update local state
-      setJobs((prev) => prev.filter((job) => job.id !== id))
+      setJobs((prev) => prev.filter((job) => job.id !== id));
     }
-  }
+  };
+
+  const handleUpdate = (updated: JobFormValues) => {
+    setJobs((prev) =>
+      prev.map((job) => (job.id === updated.id ? updated : job))
+    );
+  };
+
+  
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -117,16 +131,15 @@ export default function Page() {
             <ModeToggle />
           </div>
         </header>
-        <div className={`flex flex-1 flex-col gap-4 p-4 pt-0 ${!user ?  "bg-grey-200 pointer-events-none opacity-60" :"" }`}>
-          
-            
-          
+        <div
+          className={`flex flex-1 flex-col gap-4 p-4 pt-0 ${
+            !user ? "bg-grey-200 pointer-events-none opacity-60" : ""
+          }`}
+        >
           {!user && (
             <p className="text-sm text-gray-500 italic mt-2">
               Please log in to access this feature
-              
             </p>
-            
           )}
 
           {/* <div className="grid auto-rows-min gap-4 md:grid-cols-3">
@@ -139,7 +152,18 @@ export default function Page() {
           </div>
           <div className="bg-muted/50 flex flex-col flex-1 rounded-xl overflow-hidden p-2">
             <div className="flex-1 overflow-auto">
-              <DataTable columns={columns(handleDelete)} data={jobs} />
+            <DataTable columns={columns(handleDelete, handleUpdate, handleEdit)} data={jobs} />
+              {editingJob && (
+                <EditJobDialog
+                  job={editingJob}
+                  onUpdate={(updatedJob) => {
+                    handleUpdate(updatedJob);
+                    setEditOpen(false);
+                  }}
+                  open={editOpen}
+                  setOpen={setEditOpen}
+                />
+              )}
             </div>
           </div>
         </div>

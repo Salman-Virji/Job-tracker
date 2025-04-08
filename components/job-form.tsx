@@ -1,12 +1,10 @@
-
-
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { format } from "date-fns"
-import { useState } from "react"
-import { CalendarIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { useState } from "react";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import {
   Form,
@@ -15,27 +13,25 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Calendar } from "@/components/ui/calendar"
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
-import supabase from "@/lib/supabase"
-import { error } from "console"
-
-
+import supabase from "@/lib/supabase";
+import { error } from "console";
 
 const formSchema = z.object({
   id: z.string().uuid().optional(),
@@ -50,63 +46,97 @@ const formSchema = z.object({
   ]),
   dateApplied: z.coerce.date(),
   jobURL: z.string().optional(),
-})
+});
 
-export type JobFormValues = z.infer<typeof formSchema>
+export type JobFormValues = z.infer<typeof formSchema>;
 
 export default function JobForm({
   onSubmitJob,
+  initialValues,
+  isEditMode = false,
 }: {
-  onSubmitJob: (data: JobFormValues) => void
+  onSubmitJob: (data: JobFormValues) => void;
+  initialValues?: JobFormValues;
+  isEditMode?: boolean;
 }) {
-  
   const form = useForm<JobFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      
-      jobTitle: "",
-      company: "",
-      status: "Submitted",
-      dateApplied: undefined,
-      jobURL: "",
+      id:  initialValues?.id,
+      jobTitle: initialValues?.jobTitle ?? "",
+      company: initialValues?.company ?? "",
+      status: initialValues?.status ?? "Submitted",
+      dateApplied: initialValues?.dateApplied ?? undefined,
+      jobURL: initialValues?.jobURL ?? "",
     },
-  })
+  });
 
   const onSubmit = async (values: JobFormValues) => {
     // 1. Get the logged-in user
     const {
       data: { user },
       error: userError,
-    } = await supabase.auth.getUser()
-  
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      alert("You must be logged in to submit.")
-      return
+      alert("You must be logged in to submit.");
+      return;
     }
 
-    
-  
+    let response;
+    if (isEditMode && values.id) {
+      response = await supabase
+        .from("jobs")
+        .update({
+          job_title: values.jobTitle,
+          company: values.company,
+          status: values.status,
+          date_applied: values.dateApplied,
+          job_url: values.jobURL || null,
+        })
+        .eq("id", values.id)
+        .select("*")
+        .single();
+    } else {
+      response = await supabase
+      .from("jobs")
+      .insert([
+        {
+          job_title: values.jobTitle,
+          company: values.company,
+          status: values.status,
+          date_applied: values.dateApplied,
+          job_url: values.jobURL || null,
+          user_id: user.id,
+        },
+      ])
+      .select("*")
+      .single()
+    }
+
     // 2. Insert job into Supabase
-    const { data,error } = await supabase.from("jobs").insert([
-      {
-        
-        job_title: values.jobTitle,
-        company: values.company,
-        status: values.status,
-        date_applied: values.dateApplied,
-        job_url: values.jobURL || null,
-        user_id: user.id,
-      },
-    ])
-    .select("*")
-    .single()
-    
+    // const { data, error } = await supabase
+    //   .from("jobs")
+    //   .insert([
+    //     {
+    //       job_title: values.jobTitle,
+    //       company: values.company,
+    //       status: values.status,
+    //       date_applied: values.dateApplied,
+    //       job_url: values.jobURL || null,
+    //       user_id: user.id,
+    //     },
+    //   ])
+    //   .select("*")
+    //   .single();
+    const { data, error } = response
+
     // 3. Handle success/failure
     if (error) {
-      console.error("Error saving job:", error.message)
-      alert("Something went wrong")
+      console.error("Error saving job:", error.message);
+      alert("Something went wrong");
     } else {
-      alert("Job saved successfully!")
+      alert("Job saved successfully!");
       onSubmitJob({
         id: data.id,
         jobTitle: data.job_title,
@@ -115,13 +145,16 @@ export default function JobForm({
         dateApplied: new Date(data.date_applied),
         jobURL: data.job_url ?? "",
       });
-      form.reset() // optional: clear the form after saving
+      
+      if(!isEditMode){
+        form.reset(); //  clear the form after saving
+      }
+      
     }
-  }
-  
+  };
 
   // onSubmitJob(values)
-    // form.reset() 
+  // form.reset()
 
   return (
     <Form {...form}>
@@ -207,7 +240,9 @@ export default function JobForm({
                           !field.value && "text-muted-foreground"
                         )}
                       >
-                        {field.value ? format(field.value, "PPP") : "Pick a date"}
+                        {field.value
+                          ? format(field.value, "PPP")
+                          : "Pick a date"}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
@@ -244,11 +279,14 @@ export default function JobForm({
 
         {/* Submit Button */}
         <div className="flex justify-end">
-          <Button type="submit" className="px-6 py-2 text-sm font-semibold shadow">
+          <Button
+            type="submit"
+            className="px-6 py-2 text-sm font-semibold shadow"
+          >
             Save Application
           </Button>
         </div>
       </form>
     </Form>
-  )
+  );
 }
