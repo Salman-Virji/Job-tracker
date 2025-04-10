@@ -44,12 +44,12 @@ const data = {
       items: [
         {
           title: "Job Tracker",
-          url: "#",
+          url: "/dashboard",
         },
         
         {
-          title: "Analytics (coming soon)",
-          url: "#",
+          title: "Analytics",
+          url: "/analytics",
         },
       ],
     },
