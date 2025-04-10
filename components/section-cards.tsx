@@ -18,6 +18,7 @@ type StatusCount = {
 };
 export function SectionCards() {
   const [statusData, setStatusData] = useState<StatusCount[]>([]);
+  const [todayCount, setTodayCount] = useState(0)
   const [submittedCount, setSubmittedCount] = useState(0);
   const [offerCount, setOfferCount] = useState(0);
   const [inProgressCount, setInProgressCount] = useState(0);
@@ -38,6 +39,26 @@ export function SectionCards() {
         setStatusData(counts);
       }
     };
+
+    const fetchTodayCount = async () => {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+    
+        const isoDate = today.toISOString()
+    
+        const { count, error } = await supabase
+          .from("jobs")
+          .select("*", { count: "exact", head: true })
+          .gte("date_applied", isoDate)
+    
+        if (error) {
+          console.error("Error fetching today's count:", error.message)
+        } else {
+          setTodayCount(count || 0)
+        }
+      }
+    
+      fetchTodayCount()
 
     fetchStatusCounts();
   }, []);
@@ -68,7 +89,7 @@ export function SectionCards() {
           <div className="line-clamp-1 flex gap-2 font-medium">
             Applications you've sent off and are awaiting response.
           </div>
-          <div className="text-muted-foreground"></div>
+          <div className="text-muted-foreground">Jobs Applied for today {todayCount}</div>
         </CardFooter>
       </Card>
 
