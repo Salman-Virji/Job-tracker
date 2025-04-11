@@ -43,16 +43,14 @@ const chartConfig = {
 
 export function ChartAreaInteractive() {
   const isMobile = useIsMobile();
-  const [timeRange, setTimeRange] = React.useState("30d")
+  const [timeRange, setTimeRange] = React.useState("7d");
+  const [loading, setLoading] = useState(true);
 
-  // React.useEffect(() => {
-  //   if (isMobile) {
-  //     setTimeRange("7d");
-  //   }
-
-  // }, [isMobile]);
-
- 
+  React.useEffect(() => {
+    if (isMobile) {
+      setTimeRange("7d");
+    }
+  }, [isMobile]);
 
   const [chartData, setChartData] = useState<{ date: string; count: number }[]>(
     []
@@ -63,12 +61,23 @@ export function ChartAreaInteractive() {
     count: number;
   };
 
-  useEffect(() => {
-    
-    const fetchChartData = async () => {
-      const { data, error } = await supabase.rpc("get_application_counts_by_day");
+  // TESTING SAMPLE  DATA 
+  // const chartData = Array.from({ length: 100 }, (_, i) => {
+  //   const date = new Date();
+  //   date.setDate(date.getDate() - (99 - i)); // spread over 100 days
 
-    
+  //   return {
+  //     date: date.toISOString().slice(0, 10), // YYYY-MM-DD
+  //     count: Math.floor(Math.random() * 6), // 0–5 applications per day
+  //   };
+  // });
+
+  useEffect(() => {
+    const fetchChartData = async () => {
+      const { data, error } = await supabase.rpc(
+        "get_application_counts_by_day"
+      );
+
       if (error) {
         console.error("Error fetching chart data:", error.message);
       } else if (data) {
@@ -78,43 +87,39 @@ export function ChartAreaInteractive() {
         }));
         setChartData(formatted);
       }
+      setLoading(false);
     };
 
     fetchChartData();
-
-    
-    
-
-    
   }, []);
 
-  // const filteredData = chartData.filter((item) => {
-  //   const date = new Date(item.date)
-  //   const today = new Date()
-  //   const rangeMap = {
-  //     "7d": 7,
-  //     "30d": 30,
-  //     "90d": 90,
-  //   }
-  //   const days = rangeMap[timeRange] || 90
-  //   const startDate = new Date()
-  //   startDate.setDate(today.getDate() - days)
-  
-  //   return date >= startDate
-  // })
-  const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date);
-    const referenceDate = new Date("2024-06-30");
+ 
+  const filteredData = React.useMemo(() => {
+    const today = new Date();
     let daysToSubtract = 90;
-    if (timeRange === "30d") {
-      daysToSubtract = 30;
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7;
-    }
-    const startDate = new Date(referenceDate);
-    startDate.setDate(startDate.getDate() - daysToSubtract);
-    return date >= startDate;
-  });
+
+    if (timeRange === "30d") daysToSubtract = 30;
+    else if (timeRange === "7d") daysToSubtract = 7;
+
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - daysToSubtract);
+
+    const hasDataInRange = chartData.some((item) => {
+      const date = new Date(item.date)
+      return date >= startDate
+    })
+
+    return chartData.filter((item) => {
+      const date = new Date(item.date);
+      return date >= startDate;
+    });
+  }, [chartData, timeRange]);
+
+  const timeRangeLabels: Record<string, string> = {
+    "7d": "Total for the last 7 Days ",
+    "30d": "Total for the last 30 Days",
+    "90d": "Total for the last 3 months",
+  }
 
   return (
     <Card className="@container/card">
@@ -122,7 +127,7 @@ export function ChartAreaInteractive() {
         <CardTitle>Total Applications</CardTitle>
         <CardDescription>
           <span className="@[540px]/card:block hidden">
-            Total for the last 3 months
+          {timeRangeLabels[timeRange]}
           </span>
           <span className="@[540px]/card:hidden">Last 3 months</span>
         </CardDescription>
@@ -130,17 +135,21 @@ export function ChartAreaInteractive() {
           <ToggleGroup
             type="single"
             value={timeRange}
-            onValueChange={setTimeRange}
+            //onValueChange={setTimeRange}
+            onValueChange={(val) => {
+              console.log("New time range:", val);
+              setTimeRange(val);
+            }}
             variant="outline"
             className="@[767px]/card:flex hidden"
           >
-            <ToggleGroupItem value="90d" className="h-8 px-2.5">
+            <ToggleGroupItem value="7d" className="h-8 px-2.5">
               Last 7 days
             </ToggleGroupItem>
             <ToggleGroupItem value="30d" className="h-8 px-2.5">
               Last 30 days
             </ToggleGroupItem>
-            <ToggleGroupItem value="7d" className="h-8 px-2.5">
+            <ToggleGroupItem value="90d" className="h-8 px-2.5">
               Last 3 months
             </ToggleGroupItem>
           </ToggleGroup>
@@ -170,70 +179,82 @@ export function ChartAreaInteractive() {
           config={chartConfig}
           className="aspect-auto h-[250px] w-full"
         >
-          <AreaChart data={filteredData}>
-            <defs>
-              <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-desktop)"
-                  stopOpacity={1.0}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-desktop)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-              <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-mobile)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-mobile)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              minTickGap={32}
-              tickFormatter={(value) => {
-                const date = new Date(value);
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                });
-              }}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    });
-                  }}
-                  indicator="dot"
-                />
-              }
-            />
-            <Area
-              dataKey="count"
-              type="natural"
-              fill="url(#fillDesktop)"
-              stroke="var(--color-desktop)"
-              stackId="a"
-            />
-          </AreaChart>
+          {loading ? (
+            <div className="flex h-[250px] w-full items-center justify-center text-muted-foreground text-sm">
+              Loading chart...
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="flex h-[250px] w-full items-center justify-center text-muted-foreground text-sm">
+              No application data in this time range.
+            </div>
+          ) : (
+            <AreaChart data={filteredData}>
+              <defs>
+                <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    //stopColor="var(--color-desktop)"
+                    stopColor="#1e40af"
+                    stopOpacity={1.0}
+                  />
+                  <stop
+                    offset="95%"
+                    //stopColor="var(--color-desktop)"
+                    stopColor="#1e40af"
+                    stopOpacity={0.1}
+                  />
+                </linearGradient>
+                <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-mobile)"
+                    stopOpacity={0.8}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-mobile)"
+                    stopOpacity={0.1}
+                  />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={32}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return date.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  });
+                }}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={(value) => {
+                      return new Date(value).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      });
+                    }}
+                    indicator="dot"
+                  />
+                }
+              />
+              <Area
+                dataKey="count"
+                type="natural"
+                fill="url(#fillDesktop)"
+                stroke="var(--color-desktop)"
+                stackId="a"
+              />
+            </AreaChart>
+          )}
         </ChartContainer>
       </CardContent>
     </Card>
