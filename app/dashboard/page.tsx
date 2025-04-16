@@ -26,11 +26,14 @@ import { DataTable } from "@/app/applicationtable/data-table";
 import supabase from "@/lib/supabase";
 import AuthButtons from "@/components/AuthButtons";
 import EditJobDialog from "@/components/edit-job";
+import { SearchForm } from "@/components/search-form";
 
 export default function Page() {
   const [user, setUser] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("")
+  
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -68,6 +71,8 @@ export default function Page() {
 
       fetchJobs();
     });
+
+    
   }, []);
 
   const [jobs, setJobs] = useState<JobFormValues[]>([]);
@@ -77,6 +82,12 @@ export default function Page() {
     setEditingJob(job);
     setEditOpen(true);
   };
+
+  const filteredJobs = jobs.filter((job) =>
+    Object.values(job).some((value) =>
+      String(value).toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  )
   
   
   function handleAddJob(data: JobFormValues) {
@@ -147,12 +158,17 @@ export default function Page() {
             <div className="bg-muted/50 aspect-video rounded-xl" />
             <div className="bg-muted/50 aspect-video rounded-xl" />
           </div> */}
-          <div className="bg-muted/50   rounded-xl px-5 py-5 ">
+          <div className="bg-muted/50   rounded-xl px-5 py-3 ">
+          
             <JobForm onSubmitJob={handleAddJob} />
           </div>
+          <SearchForm searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
           <div className="bg-muted/50 flex flex-col flex-1 rounded-xl overflow-hidden p-2">
+          
             <div className="flex-1 overflow-auto">
-            <DataTable columns={columns(handleDelete, handleUpdate, handleEdit)} data={jobs} />
+            
+            <DataTable columns={columns(handleDelete, handleUpdate, handleEdit)} data={filteredJobs} />
+
               {editingJob && (
                 <EditJobDialog
                   job={editingJob}

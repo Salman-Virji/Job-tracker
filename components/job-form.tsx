@@ -275,17 +275,19 @@ export default function JobForm({
               </FormItem>
             )}
           />
-        </div>
-
-        {/* Submit Button */}
-        <div className="flex justify-end">
+           {/* Submit Button */}
+         <div className="mt-5">
           <Button
             type="submit"
-            className="px-6 py-2 text-sm font-semibold shadow"
+            className="px-6 py-5 text-sm font-semibold shadow"
           >
             Save Application
           </Button>
         </div>
+         
+        </div>
+
+        
       </form>
     </Form>
   );
